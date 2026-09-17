@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% block title %} OrangeCopilot AI {% endblock %}
+{% block top_navbar_title %}
+    <a class="navbar-brand ps-3" href="{{ url_for('fh_home_bp.home') }}"> RESEAU FH</a>
+{% endblock %}
+{% block side_nav_menu %}
+     {% include 'menu_fh.html' %}
+{% endblock %}
+{% block side_nav_content %}
+<div id="layoutSidenav_content">
+    <main>
+        <div class="container-fluid px-4" style="margin-top:80px">
+
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card_custom" style="border-left: 5px solid #28a745;">
+                        <div class="card-body">
+                            <h5 class="text-muted fw-normal mt-0">LOW</h5>
+                            <h3 id="count-low" class="mt-2">-</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card_custom" style="border-left: 5px solid #ffc107;">
+                        <div class="card-body">
+                            <h5 class="text-muted fw-normal mt-0">MEDIUM</h5>
+                            <h3 id="count-medium" class="mt-2">-</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card_custom" style="border-left: 5px solid #dc3545;">
+                        <div class="card-body">
+                            <h5 class="text-muted fw-normal mt-0">HIGH</h5>
+                            <h3 id="count-high" class="mt-2">-</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card_custom" style="border-left: 5px solid #6c757d;">
+                        <div class="card-body">
+                            <h5 class="text-muted fw-normal mt-0">UNKNOWN</h5>
+                            <h3 id="count-unknown" class="mt-2">-</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-table me-1"></i>
+                    Network Risk Assessment
+                </div>
+                <div class="card-body">
+                    <table id="ai_risk_table" class="table table-striped table-hover" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>IP</th>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>RSL DIFF</th>
+                                <th>Sanity</th>
+                                <th>Risk Level</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Detail Modal -->
+            <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="detailModalIP"></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p><strong>Risk Level:</strong> <span id="detailModalRisk"></span></p>
+                            <p><strong>RSL DIFF:</strong> <span id="detailModalRslDiff"></span></p>
+                            <p><strong>Flat Fade Margin:</strong> <span id="detailModalFade"></span></p>
+                            <hr>
+                            <p><strong>Raisons :</strong></p>
+                            <ul id="detailModalRaisons"></ul>
+                            <p><strong>Causes possibles :</strong></p>
+                            <ul id="detailModalCauses"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <footer class="py-4 bg-light mt-auto">
+        <div class="container-fluid px-4">
+            <div class="d-flex align-items-center justify-content-between small">
+                <div class="text-muted">Copyright &copy; Orange Tunisia 2023</div>
+            </div>
+        </div>
+    </footer>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    let riskData = [];
+
+    $.ajax({
+        url: "{{ url_for('fh_api_bp.get_network_risk') }}",
+        type: "GET",
+        success: function(response) {
+            if (response.status !== 'success') {
+                console.log('Error loading AI risk data:', response.message);
+                return;
+            }
+            riskData = response.data;
+
+            // summary counts
+            let counts = {LOW: 0, MEDIUM: 0, HIGH: 0, UNKNOWN: 0};
+            riskData.forEach(function(row) {
+                if (counts.hasOwnProperty(row.risk_level)) {
+                    counts[row.risk_level]++;
+                }
+            });
+            $('#count-low').text(counts.LOW);
+            $('#count-medium').text(counts.MEDIUM);
+            $('#count-high').text(counts.HIGH);
+            $('#count-unknown').text(counts.UNKNOWN);
+
+            // build the table
+            let table = $('#ai_risk_table').DataTable({
+                data: riskData,
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50], [10, 25, 50]],
+                responsive: true,
+                columns: [
+                    { data: 'IP' },
+                    { data: 'Name' },
+                    { data: 'Status' },
+                    { data: 'RSL DIFF' },
+                    { data: 'Sanity' },
+                    {
+                        data: 'risk_level',
+                        render: function(data) {
+                            let colorMap = {LOW: '#28a745', MEDIUM: '#ffc107', HIGH: '#dc3545', UNKNOWN: '#6c757d'};
+                            let color = colorMap[data] || '#6c757d';
+                            return '<span style="color:' + color + '; font-weight:bold;">' + data + '</span>';
+                        }
+                    },
+                    {
+                        data: null,
+                        orderable: false,
+                        render: function(data, type, row) {
+                            return '<button class="btn btn-sm btn-outline detail-button" data-ip="' + row.IP + '">Voir</button>';
+                        }
+                    }
+                ]
+            });
+
+            $('#ai_risk_table tbody').on('click', '.detail-button', function() {
+                let ip = $(this).data('ip');
+                let row = riskData.find(r => r.IP === ip);
+                if (!row) return;
+
+                $('#detailModalIP').text('Lien : ' + row.IP);
+                $('#detailModalRisk').text(row.risk_level);
+                $('#detailModalRslDiff').text(row['RSL DIFF'] !== null ? row['RSL DIFF'] + ' dB' : 'N/A');
+                $('#detailModalFade').text(row.min_fade_margin !== null ? row.min_fade_margin + ' dB' : 'N/A');
+
+                let raisonsList = $('#detailModalRaisons').empty();
+                if (row.raisons) {
+                    row.raisons.split(';').forEach(function(r) {
+                        if (r.trim()) raisonsList.append('<li>' + r.trim() + '</li>');
+                    });
+                }
+
+                let causesList = $('#detailModalCauses').empty();
+                if (row.causes_possibles) {
+                    row.causes_possibles.split(';').forEach(function(c) {
+                        if (c.trim()) causesList.append('<li>' + c.trim() + '</li>');
+                    });
+                } else {
+                    causesList.append('<li>Aucune</li>');
+                }
+
+                $('#detailModal').modal('show');
+            });
+        },
+        error: function(xhr, status, error) {
+            console.log('AJAX error loading AI risk data:', error);
+        }
+    });
+});
+</script>
+{% endblock %}

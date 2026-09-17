@@ -1,0 +1,51 @@
+# Virtual environments
+.venv/
+.venv-ai/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment / secrets
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# Flask
+flask_session/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Temporary files
+temp/
+tmp/
+
+# AI generated data and trained models
+main/FH/AI/data/processed/
+main/FH/AI/models/
+# Private credentials
+main/Radio/data/creds/
+
+# Private / project data
+main/Radio/data/
+
+# Private / project data
+main/FH/data/
+
+# Large dependency archives
+*.tar
